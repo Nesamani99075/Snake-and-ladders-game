@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snakes & Ladders — Doubly Linked List Edition</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --ladder: #22c55e;
+      --snake: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    /* Setup Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.88);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    .setup-card {
+      background: var(--panel);
+      padding: 28px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 440px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .setup-card h1 {
+      font-size: 1.5rem;
+      margin-bottom: 6px;
+    }
+
+    .setup-card p {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+
+    .player-count-selector {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .count-btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+
+    .count-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+      border-color: var(--accent);
+    }
+
+    .player-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .color-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #0f172a;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .start-btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      background: linear-gradient(135deg, #38bdf8, #2563eb);
+      color: white;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.15s;
+    }
+
+    .start-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    /* Main Layout */
+    .game-container {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+      max-width: 1060px;
+      width: 100%;
+      align-items: start;
+    }
+
+    @media (max-width: 900px) {
+      .game-container {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Board Styling */
+    .board-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-width: 680px;
+      margin: 0 auto;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+      border: 4px solid #334155;
+      background: #fefce8;
+    }
+
+    .board-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      width: 100%;
+      height: 100%;
+    }
+
+    .tile {
+      position: relative;
+      border: 1px solid rgba(15, 23, 42, 0.12);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: #334155;
+      user-select: none;
+    }
+
+    .tile.even {
+      background-color: #fef9c3;
+    }
+
+    .tile.odd {
+      background-color: #fde68a;
+    }
+
+    .tile.special-ladder {
+      background-color: #dcfce7;
+    }
+
+    .tile.special-snake {
+      background-color: #fee2e2;
+    }
+
+    .tile-badge {
+      font-size: 0.62rem;
+      padding: 1px 4px;
+      border-radius: 4px;
+      align-self: flex-end;
+      font-weight: 800;
+    }
+
+    .badge-ladder {
+      background: #16a34a;
+      color: white;
+    }
+
+    .badge-snake {
+      background: #dc2626;
+      color: white;
+    }
+
+    .board-overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Player Tokens on Board */
+    .tokens-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .token {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45);
+      transform: translate(-50%, -50%);
+      transition: left 0.24s ease, top 0.24s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    /* Sidebar Controls */
+    .sidebar {
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .turn-banner {
+      padding: 12px 16px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .turn-name {
+      font-weight: 700;
+      font-size: 1.05rem;
+    }
+
+    /* Interactive Dice */
+    .dice-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 18px;
+      background: #0f172a;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .dice-box {
+      width: 84px;
+      height: 84px;
+      background: linear-gradient(145deg, #ffffff, #e2e8f0);
+      border-radius: 18px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      padding: 12px;
+      gap: 4px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4), inset 0 -4px 6px rgba(0,0,0,0.15);
+      transition: transform 0.2s ease;
+      user-select: none;
+    }
+
+    .dice-box:hover {
+      transform: scale(1.06);
+    }
+
+    .dice-box.rolling {
+      animation: shake 0.45s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes shake {
+      0% { transform: rotate(0deg) scale(1.05); }
+      25% { transform: rotate(14deg) scale(1.1); }
+      50% { transform: rotate(-14deg) scale(1.05); }
+      75% { transform: rotate(10deg) scale(1.1); }
+      100% { transform: rotate(0deg) scale(1); }
+    }
+
+    .pip {
+      width: 14px;
+      height: 14px;
+      background: #1e293b;
+      border-radius: 50%;
+      align-self: center;
+      justify-self: center;
+      opacity: 0;
+    }
+
+    .pip.show {
+      opacity: 1;
+    }
+
+    .dice-box[data-val="1"] .pip:nth-child(5) {
+      background: #dc2626;
+      transform: scale(1.3);
+    }
+
+    .dice-hint {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    /* Player Roster */
+    .players-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .player-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px solid transparent;
+      transition: 0.2s;
+    }
+
+    .player-card.active-turn {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.1);
+    }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .player-pos {
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Activity Log */
+    .log-box {
+      background: #0f172a;
+      border-radius: 10px;
+      padding: 12px;
+      height: 150px;
+      overflow-y: auto;
+      font-size: 0.83rem;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .log-entry {
+      color: #cbd5e1;
+      line-height: 1.35;
+    }
+
+    .log-entry .ladder-txt { color: #4ade80; font-weight: 700; }
+    .log-entry .snake-txt { color: #f87171; font-weight: 700; }
+    .log-entry .win-txt { color: #facc15; font-weight: 700; }
+
+    .reset-btn {
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .reset-btn:hover {
+      color: var(--text);
+      border-color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Player Setup Modal -->
+  <div class="modal-overlay" id="setupModal">
+    <div class="setup-card">
+      <h1>Snakes & Ladders</h1>
+      <p>Powered by your Doubly Linked List (`next`, `prev`, `sl` offsets). Roll <strong>1</strong> to enter the board!</p>
+
+      <div class="player-count-selector">
+        <button class="count-btn active" onclick="setPlayerCount(2)">2 Players</button>
+        <button class="count-btn" onclick="setPlayerCount(3)">3 Players</button>
+        <button class="count-btn" onclick="setPlayerCount(4)">4 Players</button>
+      </div>
+
+      <div class="player-inputs" id="playerInputsContainer"></div>
+
+      <button class="start-btn" onclick="startGame()">Start Game</button>
+    </div>
+  </div>
+
+  <!-- Main Game UI -->
+  <div class="game-container">
+    <div class="board-wrapper">
+      <div class="board-grid" id="boardGrid"></div>
+      <svg class="board-overlay" id="boardSvg" viewBox="0 0 1000 1000" preserveAspectRatio="none"></svg>
+      <div class="tokens-layer" id="tokensLayer"></div>
+    </div>
+
+    <div class="sidebar">
+      <div class="turn-banner">
+        <div>
+          <div style="font-size: 0.75rem; color: var(--muted);">CURRENT TURN</div>
+          <div class="turn-name" id="currentTurnLabel">Player 1</div>
+        </div>
+        <div class="color-dot" id="currentTurnDot" style="width: 22px; height: 22px;"></div>
+      </div>
+
+      <div class="dice-section">
+        <div class="dice-box" id="diceBox" data-val="1" onclick="handleDiceClick()">
+          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          <span class="pip"></span><span class="pip show"></span><span class="pip"></span>
+          <span class="pip"></span><span class="pip"></span><span class="pip"></span>
+        </div>
+        <div class="dice-hint" id="diceHint">Touch / Click the dice to roll!</div>
+      </div>
+
+      <div class="players-list" id="playersList"></div>
+
+      <div class="log-box" id="gameLog"></div>
+
+      <button class="reset-btn" onclick="openSetupModal()">New Game / Change Players</button>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================
+     * 1. DOUBLY LINKED LIST IMPLEMENTATION (Direct from C Code)
+     * ========================================================= */
+    class Node {
+      constructor(data) {
+        this.data = data;
+        this.next = null;
+        this.prev = null;
+        this.sl = 0;
+      }
+    }
+
+    // Equivalent to: struct node * create(struct node *head, struct node **tail)
+    function createLinkedList() {
+      let head = null;
+      let temp = null;
+      for (let i = 0; i < 100; i++) {
+        if (head === null) {
+          head = new Node(i + 1);
+          temp = head;
+        } else {
+          temp.next = new Node(i + 1);
+          temp.next.prev = temp;
+          temp = temp.next;
+        }
+      }
+      return head;
+    }
+
+    // Equivalent to: void sandl(struct node *head)
+    const SL_MAP = {
+      2: 21,   // 2 -> 23 (Ladder)
+      7: 22,   // 7 -> 29 (Ladder)
+      22: 19,  // 22 -> 41 (Ladder)
+      27: -21, // 27 -> 6 (Snake)
+      28: 49,  // 28 -> 77 (Ladder)
+      30: 2,   // 30 -> 32 (Ladder)
+      35: -30, // 35 -> 5 (Snake)
+      39: -36, // 39 -> 3 (Snake)
+      44: 14,  // 44 -> 58 (Ladder)
+      50: -16, // 50 -> 34 (Snake)
+      54: 15,  // 54 -> 69 (Ladder)
+      59: -13, // 59 -> 46 (Snake)
+      66: -42, // 66 -> 24 (Snake)
+      70: 20,  // 70 -> 90 (Ladder)
+      73: -61, // 73 -> 12 (Snake)
+      76: -13, // 76 -> 63 (Snake)
+      80: 3,   // 80 -> 83 (Ladder)
+      87: 6,   // 87 -> 93 (Ladder)
+      89: -22, // 89 -> 67 (Snake)
+      97: -11, // 97 -> 86 (Snake)
+      99: -70  // 99 -> 29 (Snake)
+    };
+
+    function sandl(head) {
+      let temp = head;
+      while (temp !== null) {
+        temp.sl = SL_MAP[temp.data] || 0;
+        temp = temp.next;
+      }
+    }
+
+    /* =========================================================
+     * 2. GAME STATE & CONFIGURATION
+     * ========================================================= */
+    const PLAYER_COLORS = ['#3b82f6', '#ec4899', '#eab308', '#a855f7'];
+    let selectedPlayerCount = 2;
+    let boardHead = null;
+    let players = [];
+    let currentTurnIndex = 0;
+    let isAnimating = false;
+    let gameOver = false;
+
+    function setPlayerCount(count) {
+      selectedPlayerCount = count;
+      document.querySelectorAll('.count-btn').forEach((btn, idx) => {
+        btn.classList.toggle('active', idx + 2 === count);
+      });
+      renderPlayerInputs();
+    }
+
+    function renderPlayerInputs() {
+      const container = document.getElementById('playerInputsContainer');
+      container.innerHTML = '';
+      for (let i = 0; i < selectedPlayerCount; i++) {
+        container.innerHTML += `
+          <div class="input-group">
+            <span class="color-dot" style="background:${PLAYER_COLORS[i]}"></span>
+            <input type="text" id="pName${i}" placeholder="Player ${i + 1} Name" value="Player ${i + 1}" maxlength="16" />
+          </div>
+        `;
+      }
+    }
+
+    function openSetupModal() {
+      document.getElementById('setupModal').style.display = 'flex';
+    }
+
+    function startGame() {
+      boardHead = createLinkedList();
+      sandl(boardHead);
+
+      players = [];
+      for (let i = 0; i < selectedPlayerCount; i++) {
+        const inputVal = document.getElementById(`pName${i}`).value.trim();
+        players.push({
+          id: i,
+          name: inputVal || `Player ${i + 1}`,
+          color: PLAYER_COLORS[i],
+          node: null // Starts at NULL (Place 0) just like player1 = NULL in C
+        });
+      }
+
+      currentTurnIndex = 0;
+      isAnimating = false;
+      gameOver = false;
+
+      document.getElementById('setupModal').style.display = 'none';
+      document.getElementById('gameLog').innerHTML = '';
+      buildVisualBoard();
+      renderTokens();
+      updateSidebar();
+      addLog('Game started! Roll <strong>1</strong> on the dice to enter tile 1.');
+    }
+
+    /* =========================================================
+     * 3. VISUAL BOARD & SVG SNAKES/LADDERS
+     * ========================================================= */
+    function getTileCoordinates(num) {
+      // Standard serpentine board: 1 is bottom-left, 100 is top-left
+      const zeroBased = num - 1;
+      const rowFromBottom = Math.floor(zeroBased / 10);
+      const rowFromTop = 9 - rowFromBottom;
+      const colInRow = zeroBased % 10;
+      const col = (rowFromBottom % 2 === 0) ? colInRow : (9 - colInRow);
+      return {
+        x: col * 100 + 50,
+        y: rowFromTop * 100 + 50,
+        percentX: (col * 10) + 5,
+        percentY: (rowFromTop * 10) + 5
+      };
+    }
+
+    function buildVisualBoard() {
+      const grid = document.getElementById('boardGrid');
+      grid.innerHTML = '';
+
+      for (let r = 9; r >= 0; r--) {
+        for (let c = 0; c < 10; c++) {
+          const num = (r % 2 === 0) ? (r * 10 + c + 1) : (r * 10 + (10 - c));
+          const slOffset = SL_MAP[num] || 0;
+          const tile = document.createElement('div');
+          tile.className = `tile ${(r + c) % 2 === 0 ? 'even' : 'odd'}`;
+
+          if (slOffset > 0) tile.classList.add('special-ladder');
+          if (slOffset < 0) tile.classList.add('special-snake');
+
+          let badgeHTML = '';
+          if (slOffset > 0) {
+            badgeHTML = `<span class="tile-badge badge-ladder">↑ ${num + slOffset}</span>`;
+          } else if (slOffset < 0) {
+            badgeHTML = `<span class="tile-badge badge-snake">↓ ${num + slOffset}</span>`;
+          }
+
+          tile.innerHTML = `<span>${num}</span>${badgeHTML}`;
+          grid.appendChild(tile);
+        }
+      }
+
+      drawSnakesAndLaddersSVG();
+    }
+
+    function drawSnakesAndLaddersSVG() {
+      const svg = document.getElementById('boardSvg');
+      svg.innerHTML = '';
+
+      Object.entries(SL_MAP).forEach(([startStr, offset]) => {
+        const start = parseInt(startStr, 10);
+        const end = start + offset;
+        const p1 = getTileCoordinates(start);
+        const p2 = getTileCoordinates(end);
+
+        if (offset > 0) {
+          // Draw Ladder
+          const dx = p2.x - p1.x;
+          const dy = p2.y - p1.y;
+          const len = Math.hypot(dx, dy);
+          const nx = (-dy / len) * 12;
+          const ny = (dx / len) * 12;
+
+          let rungs = '';
+          const steps = Math.max(4, Math.floor(len / 35));
+          for (let i = 1; i < steps; i++) {
+            const t = i / steps;
+            const rx = p1.x + dx * t;
+            const ry = p1.y + dy * t;
+            rungs += `<line x1="${rx - nx}" y1="${ry - ny}" x2="${rx + nx}" y2="${ry + ny}" stroke="#15803d" stroke-width="5" stroke-linecap="round" />`;
+          }
+
+          svg.innerHTML += `
+            <g opacity="0.78">
+              <line x1="${p1.x - nx}" y1="${p1.y - ny}" x2="${p2.x - nx}" y2="${p2.y - ny}" stroke="#16a34a" stroke-width="7" stroke-linecap="round"/>
+              <line x1="${p1.x + nx}" y1="${p1.y + ny}" x2="${p2.x + nx}" y2="${p2.y + ny}" stroke="#16a34a" stroke-width="7" stroke-linecap="round"/>
+              ${rungs}
+            </g>
+          `;
+        } else {
+          // Draw Curvy Snake
+          const midX = (p1.x + p2.x) / 2 + 45;
+          const midY = (p1.y + p2.y) / 2;
+          svg.innerHTML += `
+            <g opacity="0.78">
+              <path d="M ${p1.x} ${p1.y} Q ${midX} ${midY} ${p2.x} ${p2.y}" fill="none" stroke="#dc2626" stroke-width="10" stroke-linecap="round" stroke-dasharray="14 6"/>
+              <circle cx="${p1.x}" cy="${p1.y}" r="11" fill="#991b1b" />
+            </g>
+          `;
+        }
+      });
+    }
+
+    function renderTokens() {
+      const layer = document.getElementById('tokensLayer');
+      layer.innerHTML = '';
+
+      players.forEach((p, idx) => {
+        const token = document.createElement('div');
+        token.className = 'token';
+        token.id = `token-${p.id}`;
+        token.style.backgroundColor = p.color;
+        token.textContent = idx + 1;
+        layer.appendChild(token);
+      });
+
+      updateTokenPositions();
+    }
+
+    function updateTokenPositions() {
+      const offsetAngles = [
+        { dx: -1.4, dy: -1.4 },
+        { dx: 1.4, dy: -1.4 },
+        { dx: -1.4, dy: 1.4 },
+        { dx: 1.4, dy: 1.4 }
+      ];
+
+      players.forEach((p, idx) => {
+        const token = document.getElementById(`token-${p.id}`);
+        if (!token) return;
+
+        if (p.node === null) {
+          // Off-board waiting area (bottom-left corner)
+          token.style.left = `${2 + idx * 3.5}%`;
+          token.style.top = `97.5%`;
+        } else {
+          const coords = getTileCoordinates(p.node.data);
+          const nudge = offsetAngles[idx];
+          token.style.left = `${coords.percentX + nudge.dx}%`;
+          token.style.top = `${coords.percentY + nudge.dy}%`;
+        }
+      });
+    }
+
+    /* =========================================================
+     * 4. DICE & LINKED-LIST MOVEMENT LOGIC
+     * ========================================================= */
+    const PIP_PATTERNS = {
+      1: [4],
+      2: [0, 8],
+      3: [0, 4, 8],
+      4: [0, 2, 6, 8],
+      5: [0, 2, 4, 6, 8],
+      6: [0, 2, 3, 5, 6, 8]
+    };
+
+    function showDiceFace(val) {
+      const diceBox = document.getElementById('diceBox');
+      diceBox.setAttribute('data-val', val);
+      const pips = diceBox.querySelectorAll('.pip');
+      pips.forEach((pip, i) => {
+        pip.classList.toggle('show', PIP_PATTERNS[val].includes(i));
+      });
+    }
+
+    const sleep = (ms) => new Promise(res => setTimeout(res, ms));
+
+    async function handleDiceClick() {
+      if (isAnimating || gameOver) return;
+      isAnimating = true;
+
+      const diceBox = document.getElementById('diceBox');
+      diceBox.classList.add('rolling');
+      document.getElementById('diceHint').textContent = 'Rolling...';
+
+      await sleep(450);
+
+      // Exact C logic: int dice = (rand() % 6) + 1;
+      const dice = Math.floor(Math.random() * 6) + 1;
+      diceBox.classList.remove('rolling');
+      showDiceFace(dice);
+
+      const player = players[currentTurnIndex];
+
+      // CASE 1: player == NULL (Needs a 1 to start the game, matching if(dice1 == 1))
+      if (player.node === null) {
+        if (dice === 1) {
+          player.node = boardHead; // player1 = head
+          updateTokenPositions();
+          addLog(`<strong>${player.name}</strong> rolled <strong>1</strong> and entered the board at Tile 1!`);
+        } else {
+          addLog(`<strong>${player.name}</strong> rolled ${dice}. (Needs <strong>1</strong> to start)`);
+        }
+      }
+      // CASE 2: player != NULL (Traverse ->next and ->prev pointers)
+      else {
+        addLog(`<strong>${player.name}</strong> rolled <strong>${dice}</strong> from Tile ${player.node.data}.`);
+
+        if (player.node.data + dice <= 100) {
+          // Step-by-step forward traversal: player = player->next
+          for (let i = 1; i <= dice; i++) {
+            player.node = player.node.next;
+            updateTokenPositions();
+            await sleep(220);
+          }
+
+          // Check Snake or Ladder offset on current node (player->sl)
+          if (player.node.sl !== 0) {
+            await sleep(250);
+            if (player.node.sl > 0) {
+              const a = player.node.sl;
+              const fromTile = player.node.data;
+              for (let i = 1; i <= a; i++) {
+                player.node = player.node.next;
+              }
+              updateTokenPositions();
+              addLog(`<span class="ladder-txt">LADDER!</span> ${player.name} climbed from ${fromTile} to <strong>${player.node.data}</strong>!`);
+            } else if (player.node.sl < 0) {
+              const b = player.node.sl;
+              const fromTile = player.node.data;
+              for (let i = b; i <= -1; i++) {
+                player.node = player.node.prev;
+              }
+              updateTokenPositions();
+              addLog(`<span class="snake-txt">SNAKE!</span> ${player.name} slid down from ${fromTile} to <strong>${player.node.data}</strong>!`);
+            }
+          }
+
+          // Check Winning Condition (player->data == 100)
+          if (player.node.data === 100) {
+            addLog(`<span class="win-txt">🏆 ${player.name} HAS WON THE GAME!</span>`);
+            document.getElementById('diceHint').textContent = `${player.name} wins!`;
+            gameOver = true;
+            updateSidebar();
+            isAnimating = false;
+            return;
+          }
+        } else {
+          addLog(`<strong>${player.name}</strong> needs exact roll to reach 100. Stays on ${player.node.data}.`);
+        }
+      }
+
+      // Advance Turn
+      currentTurnIndex = (currentTurnIndex + 1) % players.length;
+      updateSidebar();
+      document.getElementById('diceHint').textContent = 'Touch / Click the dice to roll!';
+      isAnimating = false;
+    }
+
+    function updateSidebar() {
+      const currentPlayer = players[currentTurnIndex];
+      document.getElementById('currentTurnLabel').textContent = currentPlayer.name;
+      document.getElementById('currentTurnDot').style.background = currentPlayer.color;
+
+      const list = document.getElementById('playersList');
+      list.innerHTML = '';
+
+      players.forEach((p, idx) => {
+        const placeText = p.node === null ? 'Start (0)' : `Tile ${p.node.data}`;
+        list.innerHTML += `
+          <div class="player-card ${idx === currentTurnIndex && !gameOver ? 'active-turn' : ''}">
+            <div class="player-info">
+              <span class="color-dot" style="background:${p.color}"></span>
+              <strong>${p.name}</strong>
+            </div>
+            <span class="player-pos">${placeText}</span>
+          </div>
+        `;
+      });
+    }
+
+    function addLog(htmlMsg) {
+      const logBox = document.getElementById('gameLog');
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.innerHTML = htmlMsg;
+      logBox.prepend(div);
+    }
+
+    // Initialize Setup Modal Inputs
+    renderPlayerInputs();
+  </script>
+</body>
+</html>
